@@ -70,7 +70,7 @@ class ModelTrainAndEval():
         else:
             try:
                 # Load the model
-                self.model = keras.models.load_model(self.modelPath)
+                self.model = keras.models.load_model(os.path.join(self.modelPath, 'model.keras'))
             except:
                 logging.error('Desired model: ' + self.layerName + '-' + self.modelName + ' cannot be loaded...')
                 traceback.print_exc()
@@ -116,8 +116,9 @@ class ModelTrainAndEval():
                 validation_data = valDS, 
                 verbose = 1,
                 callbacks = [self.esCallBack])
-            
+
             #self.model.save(self.modelPath, save_format="hdf5", save_traces = True)
+            self.model.save(os.path.join(self.modelPath, 'model.keras'))
 
         except:
             logging.error('Training of the ' + self.layerName + '-' + self.modelName + ' model failed...')
