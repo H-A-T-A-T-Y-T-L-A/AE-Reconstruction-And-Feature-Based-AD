@@ -1,5 +1,6 @@
 import pickle
 import tensorflow as tf
+import keras
 
 class HardNet(object):
     def __init__(self):
@@ -78,7 +79,8 @@ class HardNet(object):
 
     def input_norm(self, x, eps=1e-6):
         
-        x_flatten = tf.compat.v1.layers.flatten(x)
+        #x_flatten = tf.compat.v1.layers.flatten(x)
+        x_flatten = keras.layers.Flatten()(x)
         x_mu, x_std = tf.nn.moments(x=x_flatten, axes=[1])
         
         # Add extra dimension
