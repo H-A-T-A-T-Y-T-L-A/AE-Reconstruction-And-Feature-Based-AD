@@ -16,6 +16,8 @@ Please refer to following examples:
 import keras
 import tensorflow as tf
 
+import json
+
 from keras.models import Model
 from keras.layers import Layer
 
@@ -42,21 +44,27 @@ class VAE(Model):
     def get_config(self) -> dict:
         base = super()
         config = base.get_config()
+
+        inputs = keras.saving.serialize_keras_object(self.saved_inputs)
+        outputs = keras.saving.serialize_keras_object(self.saved_outputs)
+
+        outputs['config']['shape'] = tuple([int(x) if x is not None else None for x in outputs['config']['shape']])
+
         config.update({
-            'inputs': keras.saving.serialize_keras_object(self.saved_inputs),
-            'outputs': keras.saving.serialize_keras_object(self.saved_outputs),
-            'encoder': keras.saving.serialize_keras_object(self.encoder),
-            'decoder': keras.saving.serialize_keras_object(self.decoder),
-            'modelName': self.modelName,
+            'inputs': inputs,
+            'outputs': outputs,
+            'encoder': self.encoder.get_config(),
+            'decoder': self.decoder.get_config(),
+            'modelName': self.modelName
         })
         return config
 
     @classmethod
     def from_config(cls, config: dict):
-        config['intputs'] = keras.saving.deserialize_keras_object(config['inputs'])
+        config['inputs'] = keras.saving.deserialize_keras_object(config['inputs'])
         config['outputs'] = keras.saving.deserialize_keras_object(config['outputs'])
-        config['encoder'] = keras.saving.deserialize_keras_object(config['encoder'])
-        config['decoder'] = keras.saving.deserialize_keras_object(config['decoder'])
+        config['encoder'] = Model.from_config(config['encoder'])
+        config['decoder'] = Model.from_config(config['decoder'])
         cls(**config)
     
     @property
@@ -106,13 +114,13 @@ class VAE(Model):
 class Sampling(Layer):
     """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
 
-    def get_config(self) -> dict:
-        config = super().get_config()
-        return config
+    # def get_config(self) -> dict:
+    #     config = super().get_config()
+    #     return config
 
-    @classmethod
-    def from_config(cls, config: dict):
-        cls(**config)
+    # @classmethod
+    # def from_config(cls, config: dict):
+    #     cls(**config)
 
     def call(self, inputs):
         z_mean, z_log_var = inputs

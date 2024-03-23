@@ -134,7 +134,7 @@ def main():
                             
                             modelData = modelObj.returnProcessedData()
                         except:
-                            logging.error('An error occured during the training or evaluation of ' + modelSel + ' model...')
+                            logging.error('An error occured during the training or evaluation of ' + model + ' model...')
                             traceback.print_exc()
                         else:
                             logging.info('Model ' + model + ' was trained succesfuly...')
