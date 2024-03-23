@@ -20,18 +20,43 @@ from keras.models import Model
 from keras.layers import Layer
 
 ## Class to define and train VAEs models
+@keras.saving.register_keras_serializable()
 class VAE(Model):
     
     def __init__(self, inputs, outputs, encoder, decoder, modelName, **kwargs):
         super(VAE, self).__init__(inputs, outputs, **kwargs)
         
+        self.saved_inputs = inputs
+        self.saved_outputs = outputs
+
         self.encoder = encoder
         self.decoder = decoder
+        self.modelName = modelName
+
+        self.kwargs = kwargs
         
         self.total_loss_tracker = keras.metrics.Mean(name = "total_loss")
         self.reconstruction_loss_tracker = keras.metrics.Mean(name = "reconstruction_loss")
         self.kl_loss_tracker = keras.metrics.Mean(name = "kl_loss")
 
+    def get_config(self) -> dict:
+        base = super()
+        config = base.get_config()
+        config.update({
+            'inputs': self.saved_inputs.tolist(),
+            'outputs': self.saved_outputs.tolist(),
+            'encoder': self.encoder.get_config(),
+            'decoder': self.decoder.get_config(),
+            'modelName': self.modelName,
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config: dict):
+        config['intputs'] = tf.constant(config.pop('inputs'))
+        config['outputs'] = tf.constant(config.pop('outputs'))
+        cls(**config)
+    
     @property
     def metrics(self):
         return [
@@ -75,8 +100,17 @@ class VAE(Model):
 
 
 ## Sampling layer for VAEs
+@keras.saving.register_keras_serializable()
 class Sampling(Layer):
     """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
+
+    def get_config(self) -> dict:
+        config = super().get_config()
+        return config
+
+    @classmethod
+    def from_config(cls, config: dict):
+        cls(**config)
 
     def call(self, inputs):
         z_mean, z_log_var = inputs
@@ -85,9 +119,9 @@ class Sampling(Layer):
         epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
         return z_mean + tf.exp(0.5 * z_log_var) * epsilon
     
-    
-    
+
 ## Help class for VQ-VAEs
+@keras.saving.register_keras_serializable()
 class VectorQuantizer(Layer):
     def __init__(self, num_embeddings, embedding_dim, beta=0.25, **kwargs):
         super().__init__(**kwargs)
@@ -106,6 +140,14 @@ class VectorQuantizer(Layer):
             trainable=True,
             name="embeddings_vqvae",
         )
+
+    def get_config(self) -> dict:
+        config = super().get_config()
+        return config
+
+    @classmethod
+    def from_config(cls, config: dict):
+        cls(**config)
 
     def call(self, x):
         # Calculate the input shape of the inputs and
@@ -148,6 +190,7 @@ class VectorQuantizer(Layer):
 
 
 ## Class to define and train the VQ-VAE models
+@keras.saving.register_keras_serializable()
 class VQVAETrainer(Model):
     def __init__(self, inputs, outputs, vqvae, modelName, train_variance, latent_dim=32, num_embeddings=128, **kwargs):
         super(VQVAETrainer, self).__init__(inputs, outputs, **kwargs)
@@ -156,10 +199,16 @@ class VQVAETrainer(Model):
         self.num_embeddings = num_embeddings
         
         self.vqvae = vqvae
+        self.modelName = modelName
 
         self.total_loss_tracker = keras.metrics.Mean(name = "total_loss")
         self.reconstruction_loss_tracker = keras.metrics.Mean(name = "reconstruction_loss")
         self.vq_loss_tracker = keras.metrics.Mean(name = "vq_loss")
+
+    def get_build_config(self): pass
+
+    def build_from_config(self, config):
+        pass
 
     @property
     def metrics(self):
