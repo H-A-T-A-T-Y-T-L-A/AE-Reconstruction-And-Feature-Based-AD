@@ -43,18 +43,20 @@ class VAE(Model):
         base = super()
         config = base.get_config()
         config.update({
-            'inputs': self.saved_inputs.tolist(),
-            'outputs': self.saved_outputs.tolist(),
-            'encoder': self.encoder.get_config(),
-            'decoder': self.decoder.get_config(),
+            'inputs': keras.saving.serialize_keras_object(self.saved_inputs),
+            'outputs': keras.saving.serialize_keras_object(self.saved_outputs),
+            'encoder': keras.saving.serialize_keras_object(self.encoder),
+            'decoder': keras.saving.serialize_keras_object(self.decoder),
             'modelName': self.modelName,
         })
         return config
 
     @classmethod
     def from_config(cls, config: dict):
-        config['intputs'] = tf.constant(config.pop('inputs'))
-        config['outputs'] = tf.constant(config.pop('outputs'))
+        config['intputs'] = keras.saving.deserialize_keras_object(config['inputs'])
+        config['outputs'] = keras.saving.deserialize_keras_object(config['outputs'])
+        config['encoder'] = keras.saving.deserialize_keras_object(config['encoder'])
+        config['decoder'] = keras.saving.deserialize_keras_object(config['decoder'])
         cls(**config)
     
     @property
