@@ -33,7 +33,7 @@ from ModelClassificationHardNet4 import ModelClassificationHardNet4
 def parse_args():
     parser = argparse.ArgumentParser(description = 'Train and evaluate models defined in the ini files of the init directory')
     
-    parser.add_argument('--modelTrain', default = True, type = bool, help = 'Set True for model training')
+    parser.add_argument('--modelTrain', default = False, type = bool, help = 'Set True for model training')
     parser.add_argument('--modelEval', default = True, type = bool, help = 'Set True for model evaluation')
 
     args = parser.parse_args()
@@ -134,7 +134,7 @@ def main():
                             
                             modelData = modelObj.returnProcessedData()
                         except:
-                            logging.error('An error occured during the training or evaluation of ' + model + ' model...')
+                            logging.error('An error occured during the training or evaluation of ' + modelSel + ' model...')
                             traceback.print_exc()
                         else:
                             logging.info('Model ' + model + ' was trained succesfuly...')

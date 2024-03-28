@@ -16,8 +16,6 @@ Please refer to following examples:
 import keras
 import tensorflow as tf
 
-import json
-
 from keras.models import Model
 from keras.layers import Layer
 
@@ -26,47 +24,45 @@ from keras.layers import Layer
 class VAE(Model):
     
     def __init__(self, inputs, outputs, encoder, decoder, modelName, **kwargs):
-        super(VAE, self).__init__(inputs, outputs, **kwargs)
-        
-        self.saved_inputs = inputs
-        self.saved_outputs = outputs
+        super().__init__(inputs, outputs, **kwargs)
 
         self.encoder = encoder
         self.decoder = decoder
+        
         self.modelName = modelName
 
-        self.kwargs = kwargs
-        
         self.total_loss_tracker = keras.metrics.Mean(name = "total_loss")
         self.reconstruction_loss_tracker = keras.metrics.Mean(name = "reconstruction_loss")
         self.kl_loss_tracker = keras.metrics.Mean(name = "kl_loss")
 
-    def get_config(self) -> dict:
-        base = super()
-        config = base.get_config()
-
-        inputs = keras.saving.serialize_keras_object(self.saved_inputs)
-        outputs = keras.saving.serialize_keras_object(self.saved_outputs)
-
-        outputs['config']['shape'] = tuple([int(x) if x is not None else None for x in outputs['config']['shape']])
-
+    def get_config(self):
+        config = super().get_config()
         config.update({
-            'inputs': inputs,
-            'outputs': outputs,
-            'encoder': self.encoder.get_config(),
-            'decoder': self.decoder.get_config(),
-            'modelName': self.modelName
+            # 'inputs': tf.io.serialize_tensor(self.saved_inputs).numpy(),
+            # 'outputs': tf.io.serialize_tensor(self.saved_outputs).numpy(),
+            'encoder': keras.saving.serialize_keras_object(self.encoder),
+            'decoder': keras.saving.serialize_keras_object(self.decoder),
+            'modelName': self.modelName,
+            # 'total_loss_tracker': self.total_loss_tracker,
+            # 'reconstruction_loss_tracker': self.reconstruction_loss_tracker,
+            # 'kl_loss_tracker': self.kl_loss_tracker,
         })
         return config
 
     @classmethod
     def from_config(cls, config: dict):
-        config['inputs'] = keras.saving.deserialize_keras_object(config['inputs'])
-        config['outputs'] = keras.saving.deserialize_keras_object(config['outputs'])
-        config['encoder'] = Model.from_config(config['encoder'])
-        config['decoder'] = Model.from_config(config['decoder'])
-        cls(**config)
-    
+        # inputs = tf.io.parse_tensor(config.pop("inputs"), out_type=tf.float32)
+        # input_img = keras.Input(shape = (self.imHeight, self.imWidth, self.imChannel), name='input_layer')
+        # outputs = tf.io.parse_tensor(config.pop("outputs"), out_type=tf.float32)
+        encoder = keras.layers.deserialize(config.pop("encoder"))
+        decoder = keras.layers.deserialize(config.pop("decoder"))
+        inputs = encoder.input
+        outputs = decoder.output
+        modelName = config.pop("modelName")
+
+        return cls(inputs, outputs, encoder, decoder, modelName)
+
+
     @property
     def metrics(self):
         return [
@@ -103,7 +99,7 @@ class VAE(Model):
         
         # Log results
         return {
-            "loss": self.total_loss_tracker.result(),
+            "total_loss": self.total_loss_tracker.result(),
             "reconstruction_loss": self.reconstruction_loss_tracker.result(),
             "kl_loss": self.kl_loss_tracker.result(),
         }
@@ -114,14 +110,6 @@ class VAE(Model):
 class Sampling(Layer):
     """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
 
-    # def get_config(self) -> dict:
-    #     config = super().get_config()
-    #     return config
-
-    # @classmethod
-    # def from_config(cls, config: dict):
-    #     cls(**config)
-
     def call(self, inputs):
         z_mean, z_log_var = inputs
         batch = tf.shape(z_mean)[0]
@@ -129,7 +117,8 @@ class Sampling(Layer):
         epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
         return z_mean + tf.exp(0.5 * z_log_var) * epsilon
     
-
+    
+    
 ## Help class for VQ-VAEs
 @keras.saving.register_keras_serializable()
 class VectorQuantizer(Layer):
@@ -150,14 +139,6 @@ class VectorQuantizer(Layer):
             trainable=True,
             name="embeddings_vqvae",
         )
-
-    def get_config(self) -> dict:
-        config = super().get_config()
-        return config
-
-    @classmethod
-    def from_config(cls, config: dict):
-        cls(**config)
 
     def call(self, x):
         # Calculate the input shape of the inputs and
@@ -209,16 +190,10 @@ class VQVAETrainer(Model):
         self.num_embeddings = num_embeddings
         
         self.vqvae = vqvae
-        self.modelName = modelName
 
         self.total_loss_tracker = keras.metrics.Mean(name = "total_loss")
         self.reconstruction_loss_tracker = keras.metrics.Mean(name = "reconstruction_loss")
         self.vq_loss_tracker = keras.metrics.Mean(name = "vq_loss")
-
-    def get_build_config(self): pass
-
-    def build_from_config(self, config):
-        pass
 
     @property
     def metrics(self):

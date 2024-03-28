@@ -116,7 +116,7 @@ class ModelTrainAndEval():
                 validation_data = valDS, 
                 verbose = 1,
                 callbacks = [self.esCallBack])
-
+            
             #self.model.save(self.modelPath, save_format="hdf5", save_traces = True)
             self.model.save(os.path.join(self.modelPath, 'model.keras'))
 
@@ -276,18 +276,20 @@ class ModelTrainAndEval():
 
         try:
             # Plot the history and save the curves
-            train_loss = self.trainHistory.history['loss']
             
             if self.typeAE == 'VAE1' or self.typeAE == 'VAE2':
+                train_loss = self.trainHistory.history['total_loss']
                 val_loss = self.trainHistory.history['kl_loss']
                 plotLabel = 'KL loss [-]'
                 tempTitle = 'Training and KL Loss of ' + self.layerName + '-' + self.modelName + '_' + self.labelInfo + ' model'
             elif self.typeAE == 'VQVAE1':
+                train_loss = self.trainHistory.history['total_loss']
                 val_loss = self.trainHistory.history['vqvae_loss']
                 plotLabel = 'VQ-VAE loss [-]'
                 tempTitle = 'Training and VQ-VAE Loss of ' + self.layerName + '-' + self.modelName + '_' + self.labelInfo + ' model'
             else:
                 val_loss = self.trainHistory.history['val_loss']
+                train_loss = self.trainHistory.history['loss']
                 plotLabel = 'Validation loss [-]'
                 tempTitle = 'Training and Validation Loss of ' + self.layerName + '-' + self.modelName + '_' + self.labelInfo + ' model'
             

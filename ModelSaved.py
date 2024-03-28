@@ -19,10 +19,6 @@ from keras.layers import Input, Conv2D, Dense, Flatten, Reshape
 from ModelLayers import ModelLayers
 from ModelHelperVAE import VAE, Sampling, VQVAETrainer, VectorQuantizer
 
-def test_serialization(model):
-    s = keras.saving.serialize_keras_object(model)
-    m = keras.saving.deserialize_keras_object(s)
-    print(f"{m.__class__} ---> {m.name}")
 
 ## Class with the saved models
 class ModelSaved():
@@ -79,48 +75,31 @@ class ModelSaved():
         
         # Encoder -----------------------------------------------------------
         netEnc, input_img, redEncHeight, redEncWidth, filterCount = self.layerSel.getEncoder()
-        test_serialization(netEnc)
-        test_serialization(input_img)
         
         flatten = Flatten()(netEnc)
-        test_serialization(flatten)
         z_mean = Dense(self.latentDim, name = 'mean')(flatten)
-        test_serialization(z_mean)
         z_log_var = Dense(self.latentDim, name='log_var')(flatten)
-        test_serialization(z_log_var)
         
         z = Sampling()([z_mean, z_log_var])
-        test_serialization(z)
-        
         
         encoder = Model(inputs = input_img, outputs = [z_mean, z_log_var, z], name = "enc")
-        test_serialization(encoder)
         
         # Decoder -----------------------------------------------------------
         latent_inputs = Input(shape=(self.latentDim,))
-        test_serialization(latent_inputs)
         
         x = Dense(redEncHeight * redEncWidth * filterCount, activation="relu")(latent_inputs)
-        test_serialization(x)
         x = Reshape((redEncHeight, redEncWidth, filterCount))(x)
-        test_serialization(x)
         
         output_img = self.layerSel.getDecoder(x, filterCount)
-        test_serialization(output_img)
         
         decoder = Model(inputs = latent_inputs, outputs = output_img, name = "dec")
-        test_serialization(decoder)
         
         z_mean, z_log_var, z = encoder(input_img)
-        test_serialization(z_mean)
-        test_serialization(z_log_var)
-        test_serialization(z)
         
         reconstructions = decoder(z)
         
         vae = VAE(input_img, reconstructions, encoder, decoder, self.modelName)
         vae.compile(optimizer = keras.optimizers.Adam())
-        test_serialization(vae)
         
         return vae
     
@@ -215,7 +194,7 @@ class ModelSaved():
         # Rename the out_E layer for enc
         for i, layer in enumerate(model.layers):
             if layer.name == 'out_E':
-                layer.name = 'enc'
+                layer._name = 'enc'
         
         # Configure the model for training
         model.compile(loss = 'mean_squared_error', optimizer = optimizers.Adam()) 
